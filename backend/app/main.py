@@ -28,8 +28,10 @@ def simulate_market():
         price += random.gauss(drift, 0.3)
         price = max(80, min(130, price))
         current_price = price
+        now = time.time()
         tick = {
-            "time": time.strftime("%H:%M:%S"),
+            "ts": int(now * 1000),
+            "time": time.strftime("%H:%M:%S", time.localtime(now)),
             "price": round(price, 2),
             "bid": round(price - random.uniform(0.01, 0.05), 2),
             "ask": round(price + random.uniform(0.01, 0.05), 2),
@@ -131,6 +133,11 @@ def run_backtest(config: GridConfig):
         "winRate": round(win_rate, 1),
         "equityCurve": equity_curve
     }
+
+
+@app.get("/api/ticks")
+def get_ticks():
+    return {"ticks": ticks_history[-60:]}
 
 
 @app.websocket("/ws")
