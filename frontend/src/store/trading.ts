@@ -12,16 +12,20 @@ export const useTradingStore = defineStore('trading', () => {
 
   let ws: WebSocket | null = null
   function connectWS() {
-    ws = new WebSocket(`ws://${location.hostname}:8000/ws`)
-    ws.onopen = () => { wsConnected.value = true }
-    ws.onmessage = (e) => {
+    // 重试或页面重新激活时可能再次进入，先清掉旧连接，避免多个 socket 并存
+    if (ws) { try { ws.close() } catch {} ws = null }
+    wsConnected.value = false
+    const sock = new WebSocket(`ws://${location.hostname}:8000/ws`)
+    ws = sock
+    sock.onopen = () => { if (ws === sock) wsConnected.value = true }
+    sock.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data)
         if (d.ticks) ticks.value = d.ticks.slice(-60)
         if (d.orderBook) orderBook.value = d.orderBook
       } catch {}
     }
-    ws.onclose = () => { wsConnected.value = false }
+    sock.onclose = () => { if (ws === sock) { wsConnected.value = false; ws = null } }
   }
 
   async function runBacktest() {
